@@ -1,0 +1,49 @@
+# Systemd service file for Press Release AI Agent
+#
+# Installation:
+# 1. Edit the paths and user below
+# 2. Copy to systemd directory:
+#    sudo cp press-release-agent.service /etc/systemd/system/
+# 3. Reload systemd:
+#    sudo systemctl daemon-reload
+# 4. Enable service:
+#    sudo systemctl enable press-release-agent
+# 5. Start service:
+#    sudo systemctl start press-release-agent
+# 6. Check status:
+#    sudo systemctl status press-release-agent
+# 7. View logs:
+#    sudo journalctl -u press-release-agent -f
+
+[Unit]
+Description=Press Release AI Agent
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+Group=your-group
+WorkingDirectory=/path/to/andrei
+Environment="PATH=/path/to/andrei/venv/bin"
+
+# Run in scheduled mode (checks periodically)
+ExecStart=/path/to/andrei/venv/bin/python /path/to/andrei/src/main.py --mode schedule
+
+# Restart on failure
+Restart=on-failure
+RestartSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=press-release-agent
+
+# Security hardening (optional)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/path/to/andrei/logs /path/to/andrei/temp
+
+[Install]
+WantedBy=multi-user.target

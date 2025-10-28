@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  press-release-agent:
+    build: .
+    container_name: press-release-agent
+    restart: unless-stopped
+
+    # Run in scheduled mode
+    command: python src/main.py --mode schedule
+
+    # Environment variables (or use .env file)
+    env_file:
+      - .env
+
+    # Volumes for persistence
+    volumes:
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+      - ./config:/app/config
+      - ./processed_emails.json:/app/processed_emails.json
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Network mode
+    network_mode: bridge

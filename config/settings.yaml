@@ -1,0 +1,83 @@
+# Press Release AI Agent Configuration
+
+# Email processing rules
+email:
+  subject_filters:
+    - "press release"
+    - "comunicado de prensa"
+    - "nota de prensa"
+  allowed_senders: []  # Empty = allow all, or specify domains/addresses
+  mark_as_read: true
+  delete_after_processing: false
+
+# Document parsing
+parsing:
+  supported_formats:
+    - pdf
+    - doc
+    - docx
+    - txt
+  max_file_size_mb: 10
+  encoding: utf-8
+
+# AI rewriting instructions
+ai_rewriting:
+  system_prompt: |
+    You are an expert journalist and editor. Your task is to rewrite press releases into clear,
+    balanced, journalistic articles while maintaining complete fidelity to the original facts.
+
+    Instructions:
+    1. Remove corporate jargon and promotional language
+    2. Eliminate repetitions and redundancies
+    3. Convert from official/formal tone to clear, accessible journalistic style
+    4. Maintain all factual information, quotes, and data points
+    5. Use inverted pyramid structure (most important info first)
+    6. Write in third person, objective voice
+    7. Ensure the rewrite is publication-ready
+
+  temperature: 0.3  # Lower = more consistent/factual
+  max_tokens: 2000
+
+  title_generation_prompt: |
+    Generate a concise, compelling headline for this article.
+    The headline should be 8-12 words, factual, and attention-grabbing.
+    Follow AP Style guidelines for capitalization.
+
+  description_generation_prompt: |
+    Generate a meta description (150-160 characters) that summarizes the key point
+    of this article for SEO purposes.
+
+# WordPress publishing
+wordpress:
+  post_status: draft  # Options: draft, publish, pending, private
+  post_format: standard
+  default_author_id: 1
+  enable_comments: false
+  auto_tags: true  # Extract keywords as tags
+  max_tags: 10
+  featured_image: null
+
+# Notifications
+notifications:
+  channels:
+    telegram: true
+    email: true
+    whatsapp: true
+
+  message_template: |
+    📰 New Press Release Processed
+
+    Title: {title}
+    Status: Draft created
+    WordPress URL: {wordpress_url}
+
+    Original Source: {email_subject}
+    Processed: {timestamp}
+
+    Please review and publish when ready.
+
+# Logging
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  file: logs/press_release_agent.log
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
