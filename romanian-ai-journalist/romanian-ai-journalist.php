@@ -3,7 +3,7 @@
  * Plugin Name: Romanian AI Journalist
  * Plugin URI: https://github.com/yourusername/romanian-ai-journalist
  * Description: An AI-powered journalist that discovers, rewrites, and publishes the most important Romanian news stories with social media content generation.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Your Name
  * Author URI: https://yourwebsite.com
  * License: GPL v2 or later
@@ -20,10 +20,18 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('RAJ_VERSION', '1.0.0');
-define('RAJ_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('RAJ_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('RAJ_PLUGIN_BASENAME', plugin_basename(__FILE__));
+if (!defined('RAJ_VERSION')) {
+    define('RAJ_VERSION', '1.0.1');
+}
+if (!defined('RAJ_PLUGIN_DIR')) {
+    define('RAJ_PLUGIN_DIR', plugin_dir_path(__FILE__));
+}
+if (!defined('RAJ_PLUGIN_URL')) {
+    define('RAJ_PLUGIN_URL', plugin_dir_url(__FILE__));
+}
+if (!defined('RAJ_PLUGIN_BASENAME')) {
+    define('RAJ_PLUGIN_BASENAME', plugin_basename(__FILE__));
+}
 
 /**
  * Main Romanian AI Journalist Class
@@ -82,13 +90,13 @@ class Romanian_AI_Journalist {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
-        // Initialize admin interface
+        // Initialize admin interface immediately
         if (is_admin()) {
-            add_action('plugins_loaded', array($this, 'init_admin'));
+            $this->init_admin();
         }
 
         // Initialize cron jobs
-        add_action('plugins_loaded', array($this, 'init_cron'));
+        $this->init_cron();
 
         // Register custom post meta
         add_action('init', array($this, 'register_post_meta'));
@@ -105,7 +113,9 @@ class Romanian_AI_Journalist {
         $this->set_default_options();
 
         // Schedule cron jobs
-        RAJ_Cron::schedule_events();
+        if (class_exists('RAJ_Cron')) {
+            RAJ_Cron::schedule_events();
+        }
 
         // Flush rewrite rules
         flush_rewrite_rules();
@@ -116,7 +126,9 @@ class Romanian_AI_Journalist {
      */
     public function deactivate() {
         // Unschedule cron jobs
-        RAJ_Cron::unschedule_events();
+        if (class_exists('RAJ_Cron')) {
+            RAJ_Cron::unschedule_events();
+        }
 
         // Flush rewrite rules
         flush_rewrite_rules();
@@ -158,14 +170,19 @@ class Romanian_AI_Journalist {
      */
     private function set_default_options() {
         $default_settings = array(
+            // API Settings
             'raj_api_provider' => 'openai',
+            'raj_openai_api_key' => '',
+            'raj_anthropic_api_key' => '',
+            'raj_newsapi_key' => '',
+            'raj_unsplash_api_key' => '',
+            'raj_pexels_api_key' => '',
+
+            // News Discovery
             'raj_news_count' => 10,
             'raj_hours_lookback' => 48,
-            'raj_auto_run_enabled' => false,
-            'raj_run_frequency' => 'daily',
-            'raj_editor_email' => get_option('admin_email'),
-            'raj_default_category' => 1,
-            'raj_post_status' => 'draft',
+            'raj_min_engagement_score' => 0,
+            'raj_keywords_to_exclude' => '',
             'raj_romanian_sources' => implode("\n", array(
                 'digi24.ro',
                 'hotnews.ro',
@@ -182,6 +199,37 @@ class Romanian_AI_Journalist {
                 'spotmedia.ro',
                 'contributor.ro',
             )),
+
+            // Content Settings
+            'raj_rewrite_style' => 'narrative',
+            'raj_content_length' => 'detailed',
+            'raj_include_quotes' => true,
+            'raj_add_context' => true,
+            'raj_post_status' => 'draft',
+            'raj_default_category' => 1,
+            'raj_auto_tag' => true,
+            'raj_featured_image_required' => true,
+
+            // Social Media
+            'raj_generate_instagram' => true,
+            'raj_generate_linkedin' => true,
+            'raj_generate_x_thread' => true,
+
+            // Email
+            'raj_editor_email' => get_option('admin_email'),
+            'raj_email_subject' => '[AI Journalist] New Stories Ready for Review',
+            'raj_send_individual_emails' => false,
+
+            // Automation
+            'raj_auto_run_enabled' => false,
+            'raj_run_frequency' => 'daily',
+            'raj_run_time' => '08:00',
+
+            // Advanced
+            'raj_debug_mode' => false,
+            'raj_log_level' => 'info',
+            'raj_max_retries' => 3,
+            'raj_timeout' => 30,
         );
 
         foreach ($default_settings as $key => $value) {
@@ -195,14 +243,18 @@ class Romanian_AI_Journalist {
      * Initialize admin interface
      */
     public function init_admin() {
-        RAJ_Admin::get_instance();
+        if (class_exists('RAJ_Admin')) {
+            RAJ_Admin::get_instance();
+        }
     }
 
     /**
      * Initialize cron system
      */
     public function init_cron() {
-        RAJ_Cron::get_instance();
+        if (class_exists('RAJ_Cron')) {
+            RAJ_Cron::get_instance();
+        }
     }
 
     /**
@@ -263,9 +315,9 @@ class Romanian_AI_Journalist {
 /**
  * Initialize the plugin
  */
-function raj_init() {
+function romanian_ai_journalist_init() {
     return Romanian_AI_Journalist::get_instance();
 }
 
-// Start the plugin
-add_action('plugins_loaded', 'raj_init');
+// Start the plugin immediately
+romanian_ai_journalist_init();
