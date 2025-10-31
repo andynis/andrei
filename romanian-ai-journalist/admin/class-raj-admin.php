@@ -189,17 +189,179 @@ class RAJ_Admin {
         }
 
         try {
-            // Initialize the news aggregator
+            // Step 1: Discover news stories
             $aggregator = new RAJ_News_Aggregator();
             $stories = $aggregator->discover_stories();
 
+            if (empty($stories)) {
+                wp_send_json_success(array(
+                    'message' => __('No new stories discovered', 'romanian-ai-journalist'),
+                    'count' => 0,
+                ));
+                return;
+            }
+
+            // Step 2: Process each story
+            $processed_posts = array();
+            $errors = array();
+
+            foreach ($stories as $story) {
+                try {
+                    $post_id = $this->process_single_story($story);
+                    if ($post_id) {
+                        $processed_posts[] = $post_id;
+                    }
+                } catch (Exception $e) {
+                    $errors[] = $story['title'] . ': ' . $e->getMessage();
+                    continue;
+                }
+            }
+
+            // Step 3: Send email notification
+            if (!empty($processed_posts)) {
+                $email_sender = new RAJ_Email_Sender();
+
+                if (RAJ_Settings::get('send_individual_emails', false)) {
+                    foreach ($processed_posts as $post_id) {
+                        $email_sender->send_individual_email($post_id);
+                    }
+                } else {
+                    $email_sender->send_batch_email($processed_posts);
+                }
+            }
+
+            // Return result
+            $message = sprintf(
+                __('Successfully processed %d out of %d stories', 'romanian-ai-journalist'),
+                count($processed_posts),
+                count($stories)
+            );
+
+            if (!empty($errors)) {
+                $message .= '. ' . __('Errors: ', 'romanian-ai-journalist') . implode('; ', array_slice($errors, 0, 3));
+            }
+
             wp_send_json_success(array(
-                'message' => sprintf(__('Found %d stories', 'romanian-ai-journalist'), count($stories)),
-                'stories' => $stories,
+                'message' => $message,
+                'count' => count($processed_posts),
+                'total' => count($stories),
+                'errors' => $errors,
             ));
+
         } catch (Exception $e) {
             wp_send_json_error(array('message' => $e->getMessage()));
         }
+    }
+
+    /**
+     * Process a single story (rescriere, imagini, social media, WordPress draft)
+     *
+     * @param array $story Story data
+     * @return int|false Post ID or false on failure
+     */
+    private function process_single_story($story) {
+        // Check for duplicates
+        $duplicate_checker = new RAJ_Duplicate_Checker();
+        if ($duplicate_checker->is_duplicate($story)) {
+            return false;
+        }
+
+        // Rewrite content with AI
+        $rewriter = new RAJ_Content_Rewriter();
+        $rewritten = $rewriter->rewrite_story($story);
+
+        // Find and download image
+        $image_finder = new RAJ_Image_Finder();
+        $image_data = null;
+        $attachment_id = null;
+
+        if (!empty($rewritten['main_keyword'])) {
+            $image_data = $image_finder->find_image($rewritten['main_keyword'], $rewritten['title']);
+        }
+
+        // Create WordPress post as draft
+        $post_data = array(
+            'post_title' => $rewritten['title'],
+            'post_content' => $rewritten['content'],
+            'post_status' => RAJ_Settings::get('post_status', 'draft'),
+            'post_type' => 'post',
+            'post_category' => array(RAJ_Settings::get('default_category', 1)),
+        );
+
+        $post_id = wp_insert_post($post_data);
+
+        if (is_wp_error($post_id)) {
+            throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+        }
+
+        // Add post meta
+        update_post_meta($post_id, 'raj_source_url', $story['url']);
+        update_post_meta($post_id, 'raj_source_name', $story['source_name']);
+        update_post_meta($post_id, 'raj_keywords', implode(', ', $rewritten['keywords']));
+
+        // Set featured image
+        if ($image_data) {
+            $attachment_id = $image_finder->download_and_attach($image_data, $post_id);
+            if ($attachment_id) {
+                set_post_thumbnail($post_id, $attachment_id);
+
+                $image_credit = sprintf(
+                    'Photo by <a href="%s" target="_blank">%s</a> on <a href="%s" target="_blank">%s</a>',
+                    $image_data['photographer_url'],
+                    $image_data['photographer'],
+                    $image_data['source_url'],
+                    $image_data['source']
+                );
+                update_post_meta($post_id, 'raj_image_source', $image_credit);
+            }
+        }
+
+        // Generate social media content
+        $social_generator = new RAJ_Social_Media_Generator();
+        $social_content = $social_generator->generate_all(
+            $rewritten['title'],
+            $rewritten['content'],
+            get_permalink($post_id)
+        );
+
+        // Save social media content as post meta
+        if (!empty($social_content['instagram'])) {
+            update_post_meta($post_id, 'raj_social_instagram', $social_content['instagram']);
+        }
+        if (!empty($social_content['linkedin'])) {
+            update_post_meta($post_id, 'raj_social_linkedin', $social_content['linkedin']);
+        }
+        if (!empty($social_content['x_thread'])) {
+            update_post_meta($post_id, 'raj_social_x_thread', $social_content['x_thread']);
+        }
+
+        // Add tags if enabled
+        if (RAJ_Settings::get('auto_tag', true) && !empty($rewritten['keywords'])) {
+            wp_set_post_tags($post_id, $rewritten['keywords'], true);
+        }
+
+        // Update Yoast SEO meta if plugin is active
+        if (defined('WPSEO_VERSION')) {
+            update_post_meta($post_id, '_yoast_wpseo_metadesc', $rewritten['meta_description']);
+            update_post_meta($post_id, '_yoast_wpseo_focuskw', $rewritten['main_keyword']);
+        }
+
+        // Update database record
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'raj_discovered_stories';
+        $wpdb->update(
+            $table_name,
+            array(
+                'status' => 'processed',
+                'wordpress_post_id' => $post_id,
+                'published_date' => current_time('mysql'),
+            ),
+            array('story_url' => $story['url']),
+            array('%s', '%d', '%s'),
+            array('%s')
+        );
+
+        return $post_id;
     }
 
     /**

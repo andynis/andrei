@@ -3,7 +3,7 @@
  * Plugin Name: Romanian AI Journalist
  * Plugin URI: https://github.com/yourusername/romanian-ai-journalist
  * Description: An AI-powered journalist that discovers, rewrites, and publishes the most important Romanian news stories with social media content generation.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Your Name
  * Author URI: https://yourwebsite.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants
 if (!defined('RAJ_VERSION')) {
-    define('RAJ_VERSION', '1.0.1');
+    define('RAJ_VERSION', '1.0.2');
 }
 if (!defined('RAJ_PLUGIN_DIR')) {
     define('RAJ_PLUGIN_DIR', plugin_dir_path(__FILE__));
