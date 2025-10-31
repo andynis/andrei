@@ -1,0 +1,114 @@
+================================================================================
+INSTRUCȚIUNI DESCĂRCARE - Romanian AI Journalist Plugin
+================================================================================
+
+Fișier: romanian-ai-journalist.zip
+Locație: /home/user/andrei/romanian-ai-journalist.zip
+Mărime: 52 KB
+Versiune: 1.0.1
+
+================================================================================
+METODE DE DESCĂRCARE
+================================================================================
+
+METODA 1: Copiere Directă (dacă ai acces la filesystem)
+--------------------------------------------------------
+cp /home/user/andrei/romanian-ai-journalist.zip ~/Downloads/
+
+
+METODA 2: SCP (de pe mașina ta locală)
+--------------------------------------------------------
+scp user@server:/home/user/andrei/romanian-ai-journalist.zip ./
+
+# Exemplu cu IP:
+scp user@192.168.1.100:/home/user/andrei/romanian-ai-journalist.zip ./
+
+# Exemplu cu port custom:
+scp -P 2222 user@server:/home/user/andrei/romanian-ai-journalist.zip ./
+
+
+METODA 3: SFTP
+--------------------------------------------------------
+sftp user@server
+> cd /home/user/andrei
+> get romanian-ai-journalist.zip
+> quit
+
+
+METODA 4: Docker (dacă Claude Code rulează în Docker)
+--------------------------------------------------------
+# Găsește container ID:
+docker ps | grep claude
+
+# Copiază fișierul din container:
+docker cp <container-id>:/home/user/andrei/romanian-ai-journalist.zip ./
+
+
+METODA 5: Download de pe GitHub
+--------------------------------------------------------
+# Fișierul este disponibil și pe GitHub:
+https://github.com/andynis/andrei/raw/claude/wordpress-ai-journalist-plugin-011CUepyL8pHfgPFF3SSL4nX/romanian-ai-journalist.zip
+
+# Download cu wget:
+wget https://github.com/andynis/andrei/raw/claude/wordpress-ai-journalist-plugin-011CUepyL8pHfgPFF3SSL4nX/romanian-ai-journalist.zip
+
+# Download cu curl:
+curl -L -O https://github.com/andynis/andrei/raw/claude/wordpress-ai-journalist-plugin-011CUepyL8pHfgPFF3SSL4nX/romanian-ai-journalist.zip
+
+
+METODA 6: Base64 (pentru copiere text)
+--------------------------------------------------------
+# Generează base64 (vezi fișierul base64.txt):
+base64 /home/user/andrei/romanian-ai-journalist.zip > romanian-ai-journalist.base64.txt
+
+# Pe mașina locală, decodifică:
+base64 -d romanian-ai-journalist.base64.txt > romanian-ai-journalist.zip
+
+
+================================================================================
+VERIFICARE FIȘIER DUPĂ DESCĂRCARE
+================================================================================
+
+# Verifică mărimea:
+ls -lh romanian-ai-journalist.zip
+# Ar trebui să fie ~52KB
+
+# Verifică MD5 checksum:
+md5sum romanian-ai-journalist.zip
+# Ar trebui să fie: c4ee2dd4a8f58e98985e033600f3e7ac
+
+# Verifică că este ZIP valid:
+unzip -t romanian-ai-journalist.zip
+
+
+================================================================================
+INSTALARE ÎN WORDPRESS
+================================================================================
+
+După descărcare:
+
+1. Login în WordPress Admin (https://your-site.com/wp-admin)
+2. Mergi la Plugins → Add New → Upload Plugin
+3. Selectează romanian-ai-journalist.zip
+4. Click "Install Now"
+5. Click "Activate Plugin"
+6. Caută în sidebar pentru "AI Journalist"
+
+Pentru instrucțiuni complete de testare, vezi:
+- QUICKSTART-TEST.md (în interiorul ZIP-ului)
+- README.md
+- INSTALLATION.md
+
+
+================================================================================
+SUPPORT
+================================================================================
+
+GitHub: https://github.com/andynis/andrei/tree/claude/wordpress-ai-journalist-plugin-011CUepyL8pHfgPFF3SSL4nX
+
+Probleme? Verifică:
+- QUICKSTART-TEST.md pentru troubleshooting
+- README.md pentru documentație completă
+- Logs WordPress pentru erori
+
+================================================================================
