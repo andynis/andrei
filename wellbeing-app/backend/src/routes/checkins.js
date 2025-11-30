@@ -15,6 +15,9 @@ router.post('/', async (req, res) => {
       socialComfort,
       symptoms,
       feelingOkay,
+      bullyingIndicators,
+      bullyingLevel,
+      bullyingRiskLevel,
       additionalNotes,
       wellbeingScore,
       studentAge,
@@ -39,9 +42,11 @@ router.post('/', async (req, res) => {
       `INSERT INTO checkins (
         app_id, classroom_id, school_id,
         mood, energy_level, social_comfort,
-        feeling_okay, symptoms, additional_notes,
+        feeling_okay, symptoms,
+        bullying_indicators, bullying_level, bullying_risk_level,
+        additional_notes,
         wellbeing_score, student_age
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
         appId,
@@ -52,6 +57,9 @@ router.post('/', async (req, res) => {
         socialComfort,
         feelingOkay,
         JSON.stringify(symptoms || []),
+        JSON.stringify(bullyingIndicators || {}),
+        bullyingLevel || 0,
+        bullyingRiskLevel || 'low',
         additionalNotes || null,
         wellbeingScore,
         studentAge,
@@ -122,6 +130,81 @@ router.post('/', async (req, res) => {
         }
       } catch (alertError) {
         console.error('Alert sending failed:', alertError);
+        // Don't fail the check-in if alert fails
+      }
+    }
+
+    // Check for bullying indicators (high or critical risk)
+    if (bullyingRiskLevel === 'high' || bullyingRiskLevel === 'critical') {
+      try {
+        // Get classroom/teacher info
+        const classroomResult = await db.query(
+          'SELECT teacher_email, teacher_name, name, school_id FROM classrooms WHERE id = $1',
+          [classroomId]
+        );
+
+        if (classroomResult.rows.length > 0) {
+          const classroom = classroomResult.rows[0];
+
+          // Get student info
+          const studentResult = await db.query(
+            'SELECT first_name, age FROM students WHERE app_id = $1',
+            [appId]
+          );
+
+          const student = studentResult.rows[0] || {
+            first_name: 'A student',
+            age: studentAge,
+          };
+
+          // Get school admin/safeguarding lead emails
+          const schoolResult = await db.query(
+            'SELECT email FROM users WHERE school_id = $1 AND (role = \'admin\' OR role = \'safeguarding_lead\')',
+            [classroom.school_id]
+          );
+
+          const additionalRecipients = schoolResult.rows.map(row => row.email);
+
+          // Send bullying alert email
+          await EmailService.sendBullyingAlert({
+            teacherEmail: classroom.teacher_email,
+            teacherName: classroom.teacher_name,
+            classroomName: classroom.name,
+            studentName: student.first_name,
+            studentAge: student.age,
+            bullyingLevel,
+            bullyingRiskLevel,
+            bullyingIndicators,
+            wellbeingScore,
+            additionalNotes,
+            timestamp: checkin.timestamp,
+            additionalRecipients, // DSL, principal, etc.
+          });
+
+          // Log bullying alert
+          await db.query(
+            `INSERT INTO alerts (
+              checkin_id, app_id, classroom_id,
+              teacher_email, wellbeing_score, email_status
+            ) VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              checkin.id,
+              appId,
+              classroomId,
+              classroom.teacher_email,
+              wellbeingScore,
+              'sent',
+            ]
+          );
+
+          // Update bullying alert status
+          await db.query(
+            'UPDATE checkins SET bullying_alert_sent = true WHERE id = $1',
+            [checkin.id]
+          );
+        }
+      } catch (bullyingAlertError) {
+        console.error('Bullying alert sending failed:', bullyingAlertError);
         // Don't fail the check-in if alert fails
       }
     }

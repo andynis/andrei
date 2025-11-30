@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import EmojiScale from '../components/EmojiScale';
 import ColorScale from '../components/ColorScale';
 import SymptomSelector from '../components/SymptomSelector';
+import BullyingIndicator from '../components/BullyingIndicator';
 import ApiService from '../services/ApiService';
+import AccessibilityService from '../services/AccessibilityService';
 
 const CheckInScreen = ({route, navigation}) => {
   const {classroomId, schoolId} = route.params;
@@ -26,44 +28,107 @@ const CheckInScreen = ({route, navigation}) => {
   const [symptoms, setSymptoms] = useState([]);
   const [feelingOkay, setFeelingOkay] = useState(null);
 
+  // Bullying indicator
+  const [bullyingIndicators, setBullyingIndicators] = useState({});
+  const [studentAge, setStudentAge] = useState(10);
+
   // Optional inputs
   const [additionalNotes, setAdditionalNotes] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    loadUserAge();
+    AccessibilityService.announceNavigation('Check-in');
+  }, []);
+
+  const loadUserAge = async () => {
+    try {
+      const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo'));
+      if (userInfo && userInfo.age) {
+        setStudentAge(userInfo.age);
+      }
+    } catch (error) {
+      console.error('Error loading user age:', error);
+    }
+  };
+
+  const calculateBullyingLevel = () => {
+    let totalPoints = 0;
+    Object.values(bullyingIndicators).forEach(answer => {
+      totalPoints += answer.points || 0;
+    });
+    return totalPoints;
+  };
+
+  const getBullyingScore = bullyingLevel => {
+    // Convert bullying level to score (0-100)
+    // 0-3: Low risk = 100
+    // 4-7: Moderate = 60
+    // 8-11: High = 30
+    // 12+: Critical = 0
+    if (bullyingLevel <= 3) return 100;
+    if (bullyingLevel <= 7) return 60;
+    if (bullyingLevel <= 11) return 30;
+    return 0;
+  };
+
   const calculateWellbeingScore = () => {
     let score = 0;
     let maxScore = 0;
 
-    // Mood (0-5 scale, weight: 30%)
+    // Mood (0-5 scale, weight: 25%)
     if (mood !== null) {
-      score += (mood / 5) * 30;
+      score += (mood / 5) * 25;
     }
-    maxScore += 30;
+    maxScore += 25;
 
-    // Energy level (0-5 scale, weight: 20%)
+    // Energy level (0-5 scale, weight: 15%)
     if (energyLevel !== null) {
-      score += (energyLevel / 5) * 20;
+      score += (energyLevel / 5) * 15;
     }
-    maxScore += 20;
+    maxScore += 15;
 
-    // Social comfort (0-5 scale, weight: 20%)
+    // Social comfort (0-5 scale, weight: 15%)
     if (socialComfort !== null) {
-      score += (socialComfort / 5) * 20;
+      score += (socialComfort / 5) * 15;
     }
-    maxScore += 20;
+    maxScore += 15;
 
-    // Physical health (weight: 30%)
+    // Physical health (weight: 25%)
     // Subtract points for each symptom
-    const symptomPenalty = Math.min(symptoms.length * 5, 30);
-    score += 30 - symptomPenalty;
-    maxScore += 30;
+    const symptomPenalty = Math.min(symptoms.length * 5, 25);
+    score += 25 - symptomPenalty;
+    maxScore += 25;
+
+    // Bullying indicator (weight: 20%)
+    const bullyingLevel = calculateBullyingLevel();
+    const bullyingScore = getBullyingScore(bullyingLevel);
+    score += (bullyingScore / 100) * 20;
+    maxScore += 20;
 
     return Math.round((score / maxScore) * 100);
   };
 
+  const isBullyingIndicatorComplete = () => {
+    // Check if all age-appropriate questions are answered
+    const ageGroup = studentAge <= 7 ? '5-7' : studentAge <= 12 ? '8-12' : '13-18';
+    const requiredQuestions = {
+      '5-7': 4,
+      '8-12': 7,
+      '13-18': 8,
+    };
+    return Object.keys(bullyingIndicators).length >= requiredQuestions[ageGroup];
+  };
+
   const isFormComplete = () => {
-    return mood !== null && energyLevel !== null && socialComfort !== null && feelingOkay !== null;
+    return (
+      mood !== null &&
+      energyLevel !== null &&
+      socialComfort !== null &&
+      feelingOkay !== null &&
+      isBullyingIndicatorComplete()
+    );
   };
 
   const handleSubmit = async () => {
@@ -79,6 +144,15 @@ const CheckInScreen = ({route, navigation}) => {
       const userInfo = JSON.parse(await AsyncStorage.getItem('userInfo'));
 
       const wellbeingScore = calculateWellbeingScore();
+      const bullyingLevel = calculateBullyingLevel();
+      const bullyingRiskLevel =
+        bullyingLevel <= 3
+          ? 'low'
+          : bullyingLevel <= 7
+          ? 'moderate'
+          : bullyingLevel <= 11
+          ? 'high'
+          : 'critical';
 
       const checkInData = {
         appId,
@@ -90,10 +164,16 @@ const CheckInScreen = ({route, navigation}) => {
         socialComfort,
         symptoms,
         feelingOkay,
+        bullyingIndicators,
+        bullyingLevel,
+        bullyingRiskLevel,
         additionalNotes: additionalNotes.trim(),
         wellbeingScore,
         studentAge: userInfo.age,
       };
+
+      // Accessibility feedback
+      AccessibilityService.announceSuccess('Check-in submitted successfully!');
 
       // Submit to backend
       await ApiService.submitCheckIn(checkInData);
@@ -190,6 +270,14 @@ const CheckInScreen = ({route, navigation}) => {
             <SymptomSelector value={symptoms} onChange={setSymptoms} />
           </>
         )}
+
+        <View style={styles.divider} />
+
+        <BullyingIndicator
+          age={studentAge}
+          value={bullyingIndicators}
+          onChange={setBullyingIndicators}
+        />
 
         <View style={styles.divider} />
 

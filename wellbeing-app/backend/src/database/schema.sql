@@ -54,6 +54,12 @@ CREATE TABLE IF NOT EXISTS checkins (
     feeling_okay BOOLEAN NOT NULL,
     symptoms JSONB DEFAULT '[]',
 
+    -- Bullying indicators (NEW)
+    bullying_indicators JSONB DEFAULT '{}',
+    bullying_level INTEGER DEFAULT 0,
+    bullying_risk_level VARCHAR(20) DEFAULT 'low', -- low, moderate, high, critical
+    bullying_alert_sent BOOLEAN DEFAULT FALSE,
+
     -- Additional information
     additional_notes TEXT,
 
@@ -71,7 +77,8 @@ CREATE TABLE IF NOT EXISTS checkins (
     INDEX idx_checkins_classroom_id (classroom_id),
     INDEX idx_checkins_school_id (school_id),
     INDEX idx_checkins_timestamp (timestamp),
-    INDEX idx_checkins_wellbeing_score (wellbeing_score)
+    INDEX idx_checkins_wellbeing_score (wellbeing_score),
+    INDEX idx_checkins_bullying_risk_level (bullying_risk_level)
 );
 
 -- Teachers/Admin users table
