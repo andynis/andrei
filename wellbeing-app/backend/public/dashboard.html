@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Dashboard - Well-being Check-in</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <h1>📊 Well-being Dashboard</h1>
+      <div class="user-info">
+        <span id="teacherName"></span>
+        <button onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div class="main-content">
+      <!-- Stats Overview -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="totalCheckins">-</div>
+          <div class="stat-label">Check-ins Today</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="averageScore">-</div>
+          <div class="stat-label">Average Score</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value alert" id="lowScores">-</div>
+          <div class="stat-label">Students Needing Attention</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📧</div>
+          <div class="stat-value" id="alertsSent">-</div>
+          <div class="stat-label">Alerts Sent</div>
+        </div>
+      </div>
+
+      <!-- Alerts Section -->
+      <div class="section">
+        <h2>🚨 Recent Alerts</h2>
+        <div id="alertsList" class="alerts-list">
+          <p class="loading">Loading alerts...</p>
+        </div>
+      </div>
+
+      <!-- Trend Chart -->
+      <div class="section">
+        <h2>📊 7-Day Trend</h2>
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <!-- Classroom Selection -->
+      <div class="section">
+        <h2>🏫 Select Classroom</h2>
+        <select id="classroomSelect" onchange="changeClassroom()">
+          <option value="">Loading classrooms...</option>
+        </select>
+        <button onclick="generateQRCode()" class="btn-primary">Generate QR Code</button>
+      </div>
+
+      <!-- QR Code Display -->
+      <div id="qrCodeSection" class="section" style="display: none;">
+        <h2>📱 Classroom QR Code</h2>
+        <div class="qr-container">
+          <img id="qrCodeImage" alt="QR Code">
+          <p id="qrCodeLabel"></p>
+          <button onclick="printQRCode()" class="btn-secondary">Print QR Code</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
